@@ -178,6 +178,30 @@
     #lp-one .ship-strip .inner{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
     #lp-one .ship-strip .tag{background:#fff;border:1px dashed rgba(0,0,0,.12);padding:.35rem .6rem;border-radius:999px;color:var(--muted);font-size:.8rem}
 
+      <!-- ===== VALUE PROP (POP PARAGRAPH) ===== -->
+<section class="section">
+  <div class="container card value" style="padding:16px">
+    <h2 id="vpTitle">Why this works</h2>
+    <p id="vpBlurb" class="pop-words">
+      A short, persuasive blurb will appear here. It will mention dream outcome, likelihood, time delay, and effort in one flowing paragraph.
+    </p>
+    <div class="vp-metrics">
+      <div class="vp-pill"><strong id="vpDream">Clearer focus</strong><span>Dream outcome</span></div>
+      <div class="vp-pill"><strong id="vpLikely">Credible, evidence-inspired</strong><span>Likelihood</span></div>
+      <div class="vp-pill"><strong id="vpTime">2–4 weeks</strong><span>Time delay</span></div>
+      <div class="vp-pill"><strong id="vpEffort">1–2 caps daily</strong><span>Effort & sacrifice</span></div>
+    </div>
+  </div>
+</section>
+      #lp-one .value .vp-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:10px}
+@media(max-width:900px){#lp-one .value .vp-metrics{grid-template-columns:repeat(2,1fr)}}
+#lp-one .value .vp-pill{display:flex;align-items:center;gap:8px;padding:.6rem .8rem;border:1px solid rgba(0,0,0,.08);border-radius:12px;background:#fff}
+#lp-one .value .vp-pill strong{color:var(--text)}
+#lp-one .pop-words{font-size:1.05rem}
+#lp-one .pop-words span{display:inline-block;transform:scale(.96) translateY(6px);opacity:0}
+@keyframes vp-pop{to{transform:scale(1) translateY(0);opacity:1}}
+
+
     /* ===== EFFECTS SLIDER ===== */
     #lp-one .effects{padding:18px}
     #lp-one .effects .range{width:100%;accent-color:var(--cta)} /* progress color -> CTA green */
@@ -513,6 +537,49 @@
     const io=new IntersectionObserver(es=>{es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('visible'); io.unobserve(e.target);} });},{threshold:.15});
     $$('.section').forEach(s=> io.observe(s));
 
+      // Pop-in animation for Value Prop blurb
+(function () {
+  const el = document.getElementById('vpBlurb');
+  if (!el) return;
+
+  const ready = () => el.textContent.trim().length > 0 && !el.dataset.vpInit;
+
+  function animate() {
+    el.dataset.vpInit = '1';                 // idempotent guard
+    const text = el.textContent;
+    el.textContent = '';
+    text.split(/\s+/).forEach((w, i) => {
+      const s = document.createElement('span');
+      s.textContent = (i ? ' ' : '') + w;
+      s.style.animation = 'vp-pop .4s ease forwards';
+      s.style.animationDelay = (i * 35) + 'ms';
+      el.appendChild(s);
+    });
+  }
+
+  // Animate when it comes into view
+  const io = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting && ready()) {
+      animate();
+      io.disconnect();
+    }
+  }, { threshold: 0.25 });
+  io.observe(el);
+
+  // If config text arrives later, watch for it
+  if (!ready()) {
+    const mo = new MutationObserver(() => {
+      if (ready()) {
+        // if already visible, animate immediately
+        const r = el.getBoundingClientRect();
+        if (r.top < window.innerHeight) animate();
+        mo.disconnect();
+      }
+    });
+    mo.observe(el, { childList: true, characterData: true, subtree: true });
+  }
+})();
+
     // Effects slider
     const stages=[{l:'Day 1',t:'Day 1: May support a calmer baseline and fewer jitters.'},{l:'Week 1',t:'Week 1: May support steadier focus and daytime energy.'},{l:'Week 2',t:'Week 2: May support better sleep quality and recovery.'},{l:'Week 4',t:'Week 4: May support resilience and sustained routine benefits.'}];
     const range=$('#effectRange'), label=$('#effectLabel'), copy=$('#effectCopy'); range?.addEventListener('input',e=>{ const i=+e.target.value; label.textContent=stages[i].l; copy.textContent=stages[i].t; });
@@ -673,6 +740,20 @@
       if(tm && cfg.tabs.mechanism) tm.textContent = safeText(cfg.tabs.mechanism);
       if(ts && cfg.tabs.sourcing)  ts.textContent = safeText(cfg.tabs.sourcing);
     }
+
+      // Value Prop (fills the new section)
+if (cfg.value_prop){
+  const set = (id, v) => { const el = document.getElementById(id); if (el && v) el.textContent = String(v); };
+  if (cfg.value_prop.blurb){
+    const el = document.getElementById('vpBlurb');
+    if (el) el.textContent = String(cfg.value_prop.blurb);
+  }
+  set('vpDream',  cfg.value_prop.dream_outcome);
+  set('vpLikely', cfg.value_prop.likelihood);
+  set('vpTime',   cfg.value_prop.time_delay);
+  set('vpEffort', cfg.value_prop.effort);
+}
+
   }
 
   function runWhenReady(){
@@ -720,6 +801,16 @@
   // Promo strip
   const promo = $$('#lp-one .ship-strip .tag');
   if(Array.isArray(t.promo_tags)) promo.forEach((el,i)=> t.promo_tags[i] && (el.textContent=t.promo_tags[i]));
+
+ // Value Prop title + labels
+if (t.value_title){ const el=document.getElementById('vpTitle'); if(el) el.textContent = t.value_title; }
+if (t.value_labels){
+  const pills = document.querySelectorAll('#lp-one .value .vp-pill span');
+  if(pills[0] && t.value_labels.dream)      pills[0].textContent = t.value_labels.dream;
+  if(pills[1] && t.value_labels.likelihood) pills[1].textContent = t.value_labels.likelihood;
+  if(pills[2] && t.value_labels.time)       pills[2].textContent = t.value_labels.time;
+  if(pills[3] && t.value_labels.effort)     pills[3].textContent = t.value_labels.effort;
+}
 
   // Section titles
   set('#effects h2', t.effects_title);
